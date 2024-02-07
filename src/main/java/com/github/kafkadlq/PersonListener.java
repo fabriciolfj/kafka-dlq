@@ -21,16 +21,19 @@ public class PersonListener {
 
     private static final Random RANDOM = new Random();
     private final ObjectMapper mapper;
+    private final PersonService personService;
 
     @KafkaListener(topics = { "persons"}, groupId = "persons")
-    @RetryableTopic(attempts = "1", kafkaTemplate = "retryableTopicKafkaTemplate", dltStrategy = DltStrategy.FAIL_ON_ERROR) //representa o número de tentativas antes de enviar a dlq
+    @RetryableTopic(attempts = "1", kafkaTemplate = "retryableTopicKafkaTemplate", dltStrategy = DltStrategy.FAIL_ON_ERROR, listenerContainerFactory = "kafkaListenerContainerFactory") //representa o número de tentativas antes de enviar a dlq
     public void handlePerson(final String person, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) throws JsonProcessingException {
-        if (RANDOM.nextInt() % 2 == 0) {
+        /*if (RANDOM.nextInt() % 2 == 0) {
             throw new RuntimeException();
-        }
+        }*/
 
         var value = mapper.readValue(person, Person.class);
         log.info("receive {}, source topic {}", value, topic);
+
+        personService.save(value);
     }
 
     @DltHandler
